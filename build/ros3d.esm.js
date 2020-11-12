@@ -52248,13 +52248,12 @@ var Marker = /*@__PURE__*/(function (superclass) {
           context.textBaseline = 'middle';
           context.fillText( message.text, 0, canvas.height/2);
 
-          var texture = new THREE$1.Texture(canvas);
-          texture.needsUpdate = true;
+          var texture = new THREE$1.CanvasTexture(canvas);
+          texture.generateMipmaps = false;
+          texture.minFilter = THREE$1.LinearFilter;
 
           var spriteMaterial = new THREE$1.SpriteMaterial({
-            map: texture,
-            // NOTE: This is needed for THREE.js r61, unused in r70
-            useScreenCoordinates: false });
+            map: texture});
           var sprite = new THREE$1.Sprite( spriteMaterial );
           var textSize = message.scale.z;
           sprite.scale.set(textWidth / canvas.height * textSize, textSize, 1);
