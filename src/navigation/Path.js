@@ -21,6 +21,7 @@ ROS3D.Path = function(options) {
   this.topicName = options.topic || '/path';
   this.tfClient = options.tfClient;
   this.color = options.color || 0xcc00ff;
+  this.lineWidth = options.lineWidth || 1.0;
   this.rootObject = options.rootObject || new THREE.Object3D();
 
   this.sn = null;
@@ -65,7 +66,7 @@ ROS3D.Path.prototype.processMessage = function(message){
   }
 
   lineGeometry.computeLineDistances();
-  var lineMaterial = new THREE.LineBasicMaterial( { color: this.color } );
+  var lineMaterial = new THREE.LineBasicMaterial( { color: this.color, linewidth: this.lineWidth } );
   var line = new THREE.Line( lineGeometry, lineMaterial );
 
   this.sn = new ROS3D.SceneNode({

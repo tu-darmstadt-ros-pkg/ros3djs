@@ -55105,6 +55105,7 @@ var Path$1 = /*@__PURE__*/(function (superclass) {
     this.topicName = options.topic || '/path';
     this.tfClient = options.tfClient;
     this.color = options.color || 0xcc00ff;
+    this.lineWidth = options.lineWidth || 1.0;
     this.rootObject = options.rootObject || new THREE$1.Object3D();
 
     this.sn = null;
@@ -55149,7 +55150,7 @@ var Path$1 = /*@__PURE__*/(function (superclass) {
     }
 
     lineGeometry.computeLineDistances();
-    var lineMaterial = new THREE$1.LineBasicMaterial( { color: this.color } );
+    var lineMaterial = new THREE$1.LineBasicMaterial( { color: this.color, linewidth: this.lineWidth } );
     var line = new THREE$1.Line( lineGeometry, lineMaterial );
 
     this.sn = new SceneNode({
