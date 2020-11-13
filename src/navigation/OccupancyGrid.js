@@ -17,6 +17,7 @@ ROS3D.OccupancyGrid = function(options) {
   var message = options.message;  
   var opacity = options.opacity || 1.0;
   var color = options.color || {r:255,g:255,b:255,a:255};
+  this.colorScheme = options.colorScheme || 'raw';
 
   // create the geometry
   var info = message.info;
@@ -116,12 +117,22 @@ ROS3D.OccupancyGrid.prototype.getValue = function(index, row, col, data) {
  * @returns r,g,b,a array of values from 0 to 255 representing the color values for each channel
  */
 ROS3D.OccupancyGrid.prototype.getColor = function(index, row, col, value) {
-  return [
-    (value * this.color.r) / 255,
-    (value * this.color.g) / 255,
-    (value * this.color.b) / 255,
-    255
-  ];
+
+  if( this.colorScheme === 'map' ) {
+    if( value < 0 || value > 100 ) {
+      return [112, 137, 134, 255];
+    } else {
+      var mapColor = 255 - (255 * value) / 100;
+      return [mapColor, mapColor, mapColor, 255];
+    }
+  } else {
+    return [
+      (value * this.color.r) / 255,
+      (value * this.color.g) / 255,
+      (value * this.color.b) / 255,
+      255
+    ];
+  }
 };
 
 ROS3D.OccupancyGrid.prototype.__proto__ = THREE.Mesh.prototype;

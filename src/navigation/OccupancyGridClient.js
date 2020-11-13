@@ -34,6 +34,7 @@ ROS3D.OccupancyGridClient = function(options) {
   this.offsetPose = options.offsetPose || new ROSLIB.Pose();
   this.color = options.color || {r:255,g:255,b:255};
   this.opacity = options.opacity || 1.0;
+  this.colorScheme = options.colorScheme || 'raw';
 
   // current grid that is displayed
   this.currentGrid = null;
@@ -80,7 +81,8 @@ ROS3D.OccupancyGridClient.prototype.processMessage = function(message){
   var newGrid = new ROS3D.OccupancyGrid({
     message : message,
     color : this.color,
-    opacity : this.opacity
+    opacity : this.opacity,
+    colorScheme : this.colorScheme
   });
 
   // check if we care about the scene

@@ -54818,6 +54818,7 @@ var OccupancyGrid = /*@__PURE__*/(function (superclass) {
     var message = options.message;  
     var opacity = options.opacity || 1.0;
     var color = options.color || {r:255,g:255,b:255,a:255};
+    this.colorScheme = options.colorScheme || 'raw';
 
     // create the geometry
     var info = message.info;
@@ -54918,12 +54919,22 @@ var OccupancyGrid = /*@__PURE__*/(function (superclass) {
    * @returns r,g,b,a array of values from 0 to 255 representing the color values for each channel
    */
   OccupancyGrid.prototype.getColor = function getColor (index, row, col, value) {
-    return [
-      (value * this.color.r) / 255,
-      (value * this.color.g) / 255,
-      (value * this.color.b) / 255,
-      255
-    ];
+
+    if( this.colorScheme === 'map' ) {
+      if( value < 0 || value > 100 ) {
+        return [112, 137, 134, 255];
+      } else {
+        var mapColor = 255 - (255 * value) / 100;
+        return [mapColor, mapColor, mapColor, 255];
+      }
+    } else {
+      return [
+        (value * this.color.r) / 255,
+        (value * this.color.g) / 255,
+        (value * this.color.b) / 255,
+        255
+      ];
+    }
   };
 
   return OccupancyGrid;
@@ -54946,6 +54957,7 @@ var OccupancyGridClient = /*@__PURE__*/(function (EventEmitter2) {
     this.offsetPose = options.offsetPose || new ROSLIB.Pose();
     this.color = options.color || {r:255,g:255,b:255};
     this.opacity = options.opacity || 1.0;
+    this.colorScheme = options.colorScheme || 'raw';
 
     // current grid that is displayed
     this.currentGrid = null;
@@ -54992,7 +55004,8 @@ var OccupancyGridClient = /*@__PURE__*/(function (EventEmitter2) {
     var newGrid = new OccupancyGrid({
       message : message,
       color : this.color,
-      opacity : this.opacity
+      opacity : this.opacity,
+      colorScheme : this.colorScheme
     });
 
     // check if we care about the scene
