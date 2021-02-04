@@ -61957,7 +61957,8 @@ class MouseHandler extends THREE$1.EventDispatcher {
     var mousePos = new THREE$1.Vector2(deviceX, deviceY);
 
     var mouseRaycaster = new THREE$1.Raycaster();
-    mouseRaycaster.linePrecision = 0.001;
+    //mouseRaycaster.linePrecision = 0.001;
+    mouseRaycaster.params.Line.threshold = 0.001;
     mouseRaycaster.setFromCamera(mousePos, this.camera);
     var mouseRay = mouseRaycaster.ray;
 
