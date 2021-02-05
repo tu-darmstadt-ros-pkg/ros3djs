@@ -60054,6 +60054,57 @@ var OccupancyGridClient = /*@__PURE__*/(function (EventEmitter2) {
   return OccupancyGridClient;
 }(eventemitter2));
 
+var HeightMap = /*@__PURE__*/(function (superclass) {
+  function HeightMap(options) {
+    options = options || {};
+    var data = options.data || [];
+    var width = options.width || 0;
+    var height = options.height || 0;
+
+    var planeGeometry = new THREE$1.PlaneGeometry(width, height, width - 1 , height -1);
+    var uintData = new Uint8Array( data.map(function (value) { return value + 128; }) );
+
+    var texture = new THREE$1.DataTexture( uintData, width, height, THREE$1.RedFormat );
+    var uniforms = {
+      bumpTexture: { type: 't', value: texture},
+      bumpScale: { type: 'f', value: 0.01 },
+      minHeight: { type: 'f', value: -50.0 },
+      maxHeight: { type: 'f', value: 127.0 },
+    };
+
+    var heightmapVertexShader = "\n      uniform sampler2D bumpTexture;\n      uniform float bumpScale;\n      uniform float minHeight;\n      uniform float maxHeight;\n      \n      varying float cellHeight;\n      \n      void main() {\n        vec4 bumpData = texture2D( bumpTexture, uv );  \n        cellHeight = clamp((bumpData.r * 255.0)-128.0, minHeight, maxHeight);\n        // move the position along the normal\n        vec3 newPosition = position + normal * bumpScale * cellHeight;\n        \n        gl_Position = projectionMatrix * modelViewMatrix * vec4( newPosition, 1.0 );\n      }\n    ";
+
+    var heightmapFragmentShader = "\n      uniform sampler2D bumpTexture;\n      uniform float bumpScale;\n      uniform float minHeight;\n      uniform float maxHeight;\n      \n      varying float cellHeight;\n      \n      void main() {\n        vec4 bumpData = texture2D( bumpTexture, uv );  \n        cellHeight = clamp((bumpData.r * 255.0)-128.0, minHeight, maxHeight);\n        // move the position along the normal\n        vec3 newPosition = position + normal * bumpScale * cellHeight;\n        \n        gl_Position = projectionMatrix * modelViewMatrix * vec4( newPosition, 1.0 );\n      }\n    ";
+
+    var shaderMaterial = new THREE$1.ShaderMaterial({
+      uniforms: uniforms,
+      vertexShader: heightmapVertexShader,
+      fragmentShader: heightmapFragmentShader,
+      side: THREE$1.DoubleSide,
+    });
+
+    superclass.call(this, planeGeometry, shaderMaterial);
+    Object.assign(this, options);
+
+    this.material = shaderMaterial;
+    this.texture = texture;
+    texture.needsUpdate = true;
+
+    this.isHeightmap = true;
+
+  }
+
+  if ( superclass ) HeightMap.__proto__ = superclass;
+  HeightMap.prototype = Object.create( superclass && superclass.prototype );
+  HeightMap.prototype.constructor = HeightMap;
+  HeightMap.prototype.dispose = function dispose () {
+    this.material.dispose();
+    this.texture.dispose();
+  };
+
+  return HeightMap;
+}(THREE$1.Mesh));
+
 /**
  * @author David V. Lu!! - davidvlu@gmail.com
  */
@@ -61288,7 +61339,6 @@ var MouseHandler = /*@__PURE__*/(function (superclass) {
     var mousePos = new THREE$1.Vector2(deviceX, deviceY);
 
     var mouseRaycaster = new THREE$1.Raycaster();
-    //mouseRaycaster.linePrecision = 0.001;
     mouseRaycaster.params.Line.threshold = 0.001;
     mouseRaycaster.setFromCamera(mousePos, this.camera);
     var mouseRay = mouseRaycaster.ray;
@@ -62145,6 +62195,7 @@ exports.MeshResource = MeshResource;
 exports.TriangleList = TriangleList;
 exports.OccupancyGrid = OccupancyGrid;
 exports.OccupancyGridClient = OccupancyGridClient;
+exports.HeightMap = HeightMap;
 exports.Odometry = Odometry;
 exports.Path = Path$1;
 exports.Point = Point;
