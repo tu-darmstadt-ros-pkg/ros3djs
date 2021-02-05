@@ -38,21 +38,16 @@ ROS3D.HeightMap = function(options) {
   `;
 
   var heightmapFragmentShader = `
-    uniform sampler2D bumpTexture;
-    uniform float bumpScale;
-    uniform float minHeight;
-    uniform float maxHeight;
-    
-    varying float cellHeight;
-    
-    void main() {
-      vec4 bumpData = texture2D( bumpTexture, uv );  
-      cellHeight = clamp((bumpData.r * 255.0)-128.0, minHeight, maxHeight);
-      // move the position along the normal
-      vec3 newPosition = position + normal * bumpScale * cellHeight;
+      uniform float minHeight;
+      uniform float maxHeight;
       
-      gl_Position = projectionMatrix * modelViewMatrix * vec4( newPosition, 1.0 );
-    }
+      varying float cellHeight;
+
+      void main() {
+        float normalizedHeight = (cellHeight - minHeight)/(maxHeight - minHeight);
+        vec4 heightColor = vec4(normalizedHeight, 0.0, 1.0 -normalizedHeight, 1.0);
+        gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0) + heightColor;
+      }
   `;
 
   var shaderMaterial = new THREE.ShaderMaterial({
