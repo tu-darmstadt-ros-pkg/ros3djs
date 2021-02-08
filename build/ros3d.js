@@ -60542,7 +60542,6 @@ class HeightMap extends THREE$1.Mesh {
     var heightScale = options.heightScale || 0.01;
     var minHeight = options.minHeight || -128.0;
     var maxHeight = options.maxHeight || 127.0;
-    var opacity = options.opacity || 1.0;
 
     var message = options.message;
     var info = message.info;
@@ -60562,7 +60561,6 @@ class HeightMap extends THREE$1.Mesh {
       bumpScale: { type: 'f', value: heightScale },
       minHeight: { type: 'f', value: minHeight },
       maxHeight: { type: 'f', value: maxHeight },
-      opacity: { type: 'f', value: opacity },
     };
 
     var heightmapVertexShader = `
@@ -60586,14 +60584,13 @@ class HeightMap extends THREE$1.Mesh {
     var heightmapFragmentShader = `
         uniform float minHeight;
         uniform float maxHeight;
-        uniform float opacity;
         
         varying float cellHeight;
 
         void main() {
           float normalizedHeight = (cellHeight - minHeight)/(maxHeight - minHeight);
-          vec4 heightColor = vec4(normalizedHeight, 0.0, 1.0 -normalizedHeight, opacity);
-          gl_FragColor = vec4(0.0, 0.0, 0.0, opacity) + heightColor;
+          vec4 heightColor = vec4(normalizedHeight, 0.0, 1.0 -normalizedHeight, 1.0);
+          gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0) + heightColor;
         }
     `;
 
@@ -60666,10 +60663,10 @@ class HeightMapClient extends eventemitter2 {
     this.compression = options.compression || 'cbor';
     this.tfClient = options.tfClient;
     this.rootObject = options.rootObject || new THREE$1.Object3D();
+    this.offsetPose = options.offsetPose || new ROSLIB.Pose();
     this.heightScale = options.heightScale || 0.01;
     this.minHeight = options.minHeight || -128.0;
     this.maxHeight = options.maxHeight || 127.0;
-    this.opacity = options.opacity || 1.0;
 
     // current grid that is displayed
     this.currentHeightMap = null;
@@ -60719,7 +60716,6 @@ class HeightMapClient extends eventemitter2 {
       heightScale: this.heightScale,
       minHeight: this.minHeight,
       maxHeight: this.maxHeight,
-      opacity: this.opacity,
     });
 
     // check if we care about the scene

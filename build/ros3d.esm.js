@@ -60058,7 +60058,6 @@ var HeightMap = /*@__PURE__*/(function (superclass) {
     var heightScale = options.heightScale || 0.01;
     var minHeight = options.minHeight || -128.0;
     var maxHeight = options.maxHeight || 127.0;
-    var opacity = options.opacity || 1.0;
 
     var message = options.message;
     var info = message.info;
@@ -60078,12 +60077,11 @@ var HeightMap = /*@__PURE__*/(function (superclass) {
       bumpScale: { type: 'f', value: heightScale },
       minHeight: { type: 'f', value: minHeight },
       maxHeight: { type: 'f', value: maxHeight },
-      opacity: { type: 'f', value: opacity },
     };
 
     var heightmapVertexShader = "\n      uniform sampler2D bumpTexture;\n      uniform float bumpScale;\n      uniform float minHeight;\n      uniform float maxHeight;\n      \n      varying float cellHeight;\n      \n      void main() {\n        vec4 bumpData = texture2D( bumpTexture, uv );  \n        cellHeight = clamp((bumpData.r * 255.0)-128.0, minHeight, maxHeight);\n        // move the position along the normal\n        vec3 newPosition = position + normal * bumpScale * cellHeight;\n        \n        gl_Position = projectionMatrix * modelViewMatrix * vec4( newPosition, 1.0 );\n      }\n    ";
 
-    var heightmapFragmentShader = "\n        uniform float minHeight;\n        uniform float maxHeight;\n        uniform float opacity;\n        \n        varying float cellHeight;\n\n        void main() {\n          float normalizedHeight = (cellHeight - minHeight)/(maxHeight - minHeight);\n          vec4 heightColor = vec4(normalizedHeight, 0.0, 1.0 -normalizedHeight, opacity);\n          gl_FragColor = vec4(0.0, 0.0, 0.0, opacity) + heightColor;\n        }\n    ";
+    var heightmapFragmentShader = "\n        uniform float minHeight;\n        uniform float maxHeight;\n        \n        varying float cellHeight;\n\n        void main() {\n          float normalizedHeight = (cellHeight - minHeight)/(maxHeight - minHeight);\n          vec4 heightColor = vec4(normalizedHeight, 0.0, 1.0 -normalizedHeight, 1.0);\n          gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0) + heightColor;\n        }\n    ";
 
     var shaderMaterial = new THREE$1.ShaderMaterial({
       uniforms: uniforms,
@@ -60138,10 +60136,10 @@ var HeightMapClient = /*@__PURE__*/(function (EventEmitter2) {
     this.compression = options.compression || 'cbor';
     this.tfClient = options.tfClient;
     this.rootObject = options.rootObject || new THREE$1.Object3D();
+    this.offsetPose = options.offsetPose || new Pose();
     this.heightScale = options.heightScale || 0.01;
     this.minHeight = options.minHeight || -128.0;
     this.maxHeight = options.maxHeight || 127.0;
-    this.opacity = options.opacity || 1.0;
 
     // current grid that is displayed
     this.currentHeightMap = null;
@@ -60192,7 +60190,6 @@ var HeightMapClient = /*@__PURE__*/(function (EventEmitter2) {
       heightScale: this.heightScale,
       minHeight: this.minHeight,
       maxHeight: this.maxHeight,
-      opacity: this.opacity,
     });
 
     // check if we care about the scene

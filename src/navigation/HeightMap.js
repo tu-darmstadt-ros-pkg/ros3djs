@@ -7,7 +7,6 @@ ROS3D.HeightMap = function(options) {
   var heightScale = options.heightScale || 0.01;
   var minHeight = options.minHeight || -128.0;
   var maxHeight = options.maxHeight || 127.0;
-  var opacity = options.opacity || 1.0;
 
   var message = options.message;
   var info = message.info;
@@ -27,7 +26,6 @@ ROS3D.HeightMap = function(options) {
     bumpScale: { type: 'f', value: heightScale },
     minHeight: { type: 'f', value: minHeight },
     maxHeight: { type: 'f', value: maxHeight },
-    opacity: { type: 'f', value: opacity },
   };
 
   var heightmapVertexShader = `
@@ -51,14 +49,13 @@ ROS3D.HeightMap = function(options) {
   var heightmapFragmentShader = `
       uniform float minHeight;
       uniform float maxHeight;
-      uniform float opacity;
       
       varying float cellHeight;
 
       void main() {
         float normalizedHeight = (cellHeight - minHeight)/(maxHeight - minHeight);
-        vec4 heightColor = vec4(normalizedHeight, 0.0, 1.0 -normalizedHeight, opacity);
-        gl_FragColor = vec4(0.0, 0.0, 0.0, opacity) + heightColor;
+        vec4 heightColor = vec4(normalizedHeight, 0.0, 1.0 -normalizedHeight, 1.0);
+        gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0) + heightColor;
       }
   `;
 
