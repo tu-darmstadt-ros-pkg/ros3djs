@@ -60589,7 +60589,6 @@ class HeightMap extends THREE$1.Mesh {
       uniforms: uniforms,
       vertexShader: heightmapVertexShader,
       fragmentShader: heightmapFragmentShader,
-      side: THREE$1.DoubleSide,
     });
 
     super(planeGeometry, shaderMaterial);
@@ -60598,8 +60597,6 @@ class HeightMap extends THREE$1.Mesh {
     this.material = shaderMaterial;
     this.texture = texture;
     texture.needsUpdate = true;
-
-    this.isHeightmap = true;
 
   };
 

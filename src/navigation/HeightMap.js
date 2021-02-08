@@ -54,7 +54,6 @@ ROS3D.HeightMap = function(options) {
     uniforms: uniforms,
     vertexShader: heightmapVertexShader,
     fragmentShader: heightmapFragmentShader,
-    side: THREE.DoubleSide,
   });
 
   THREE.Mesh.call(this, planeGeometry, shaderMaterial);
@@ -63,8 +62,6 @@ ROS3D.HeightMap = function(options) {
   this.material = shaderMaterial;
   this.texture = texture;
   texture.needsUpdate = true;
-
-  this.isHeightmap = true;
 
 };
 

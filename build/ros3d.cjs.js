@@ -60082,7 +60082,6 @@ var HeightMap = /*@__PURE__*/(function (superclass) {
       uniforms: uniforms,
       vertexShader: heightmapVertexShader,
       fragmentShader: heightmapFragmentShader,
-      side: THREE$1.DoubleSide,
     });
 
     superclass.call(this, planeGeometry, shaderMaterial);
@@ -60091,8 +60090,6 @@ var HeightMap = /*@__PURE__*/(function (superclass) {
     this.material = shaderMaterial;
     this.texture = texture;
     texture.needsUpdate = true;
-
-    this.isHeightmap = true;
 
   }
 
