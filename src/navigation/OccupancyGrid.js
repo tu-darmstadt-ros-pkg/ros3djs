@@ -17,7 +17,7 @@ ROS3D.OccupancyGrid = function(options) {
   var message = options.message;  
   var opacity = options.opacity || 1.0;
   var color = options.color || {r:255,g:255,b:255,a:255};
-  this.colorScheme = options.colorScheme || 'raw';
+  var colorScheme = options.colorScheme || 'raw';
 
   // create the geometry
   var info = message.info;
@@ -47,6 +47,8 @@ ROS3D.OccupancyGrid = function(options) {
 
   // assign options to this for subclasses
   Object.assign(this, options);
+
+  this.colorScheme = colorScheme
 
   this.quaternion.copy(new THREE.Quaternion(
       origin.orientation.x,
