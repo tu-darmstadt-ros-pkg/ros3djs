@@ -60055,9 +60055,17 @@ var OccupancyGridClient = /*@__PURE__*/(function (EventEmitter2) {
 var HeightMap = /*@__PURE__*/(function (superclass) {
   function HeightMap(options) {
     options = options || {};
-    var data = options.data || [];
-    var width = options.width || 0;
-    var height = options.height || 0;
+    var minHeight = options.minHeight || -128.0;
+    var maxHeight = options.maxHeight || 127.0;
+
+    var message = options.message;
+    var info = message.info;
+
+    var origin = info.origin;
+    var width = info.width ;
+    var height = info.height;
+    var data = message.data;
+
 
     var planeGeometry = new THREE$1.PlaneGeometry(width, height, width - 1 , height -1);
     var uintData = new Uint8Array( data.map(function (value) { return value + 128; }) );
@@ -60066,8 +60074,8 @@ var HeightMap = /*@__PURE__*/(function (superclass) {
     var uniforms = {
       bumpTexture: { type: 't', value: texture},
       bumpScale: { type: 'f', value: 0.01 },
-      minHeight: { type: 'f', value: -50.0 },
-      maxHeight: { type: 'f', value: 127.0 },
+      minHeight: { type: 'f', value: minHeight },
+      maxHeight: { type: 'f', value: maxHeight },
     };
 
     var heightmapVertexShader = "\n      uniform sampler2D bumpTexture;\n      uniform float bumpScale;\n      uniform float minHeight;\n      uniform float maxHeight;\n      \n      varying float cellHeight;\n      \n      void main() {\n        vec4 bumpData = texture2D( bumpTexture, uv );  \n        cellHeight = clamp((bumpData.r * 255.0)-128.0, minHeight, maxHeight);\n        // move the position along the normal\n        vec3 newPosition = position + normal * bumpScale * cellHeight;\n        \n        gl_Position = projectionMatrix * modelViewMatrix * vec4( newPosition, 1.0 );\n      }\n    ";
@@ -60078,6 +60086,7 @@ var HeightMap = /*@__PURE__*/(function (superclass) {
       uniforms: uniforms,
       vertexShader: heightmapVertexShader,
       fragmentShader: heightmapFragmentShader,
+      side: THREE$1.DoubleSide,
     });
 
     superclass.call(this, planeGeometry, shaderMaterial);
@@ -60086,6 +60095,21 @@ var HeightMap = /*@__PURE__*/(function (superclass) {
     this.material = shaderMaterial;
     this.texture = texture;
     texture.needsUpdate = true;
+
+    this.quaternion.copy(new THREE$1.Quaternion(
+      origin.orientation.x,
+      origin.orientation.y,
+      origin.orientation.z,
+      origin.orientation.w
+    ));
+
+    this.position.x = (width * info.resolution) / 2 + origin.position.x;
+    this.position.y = (height * info.resolution) / 2 + origin.position.y;
+    this.position.z = origin.position.z;
+    this.scale.x = info.resolution;
+    this.scale.y = info.resolution;
+    this.scale.z = info.resolution;
+
 
   }
 
@@ -60099,6 +60123,95 @@ var HeightMap = /*@__PURE__*/(function (superclass) {
 
   return HeightMap;
 }(THREE$1.Mesh));
+
+/**
+ * @author Russell Toris - rctoris@wpi.edu
+ */
+
+var HeightMapClient = /*@__PURE__*/(function (EventEmitter2) {
+  function HeightMapClient(options) {
+    EventEmitter2.call(this);
+    options = options || {};
+    this.ros = options.ros;
+    this.topicName = options.topic || '/map';
+    this.compression = options.compression || 'cbor';
+    this.tfClient = options.tfClient;
+    this.rootObject = options.rootObject || new THREE$1.Object3D();
+    this.offsetPose = options.offsetPose || new Pose();
+
+    // current grid that is displayed
+    this.currentHeightMap = null;
+
+    // subscribe to the topic
+    this.rosTopic = undefined;
+    this.subscribe();
+  }
+
+  if ( EventEmitter2 ) HeightMapClient.__proto__ = EventEmitter2;
+  HeightMapClient.prototype = Object.create( EventEmitter2 && EventEmitter2.prototype );
+  HeightMapClient.prototype.constructor = HeightMapClient;
+  HeightMapClient.prototype.unsubscribe = function unsubscribe (){
+    if(this.rosTopic){
+      this.rosTopic.unsubscribe();
+    }
+  };
+  HeightMapClient.prototype.subscribe = function subscribe (){
+    this.unsubscribe();
+
+    // subscribe to the topic
+    this.rosTopic = new Topic({
+      ros : this.ros,
+      name : this.topicName,
+      messageType : 'nav_msgs/OccupancyGrid',
+      queue_length : 1,
+      compression : this.compression
+    });
+    this.sceneNode = null;
+    this.rosTopic.subscribe(this.processMessage.bind(this));
+  };
+  HeightMapClient.prototype.processMessage = function processMessage (message){
+    // check for an old map
+    if (this.currentHeightMap) {
+      // check if it there is a tf client
+      if (this.currentHeightMap.tfClient) {
+        // grid is of type ROS3D.SceneNode
+        this.currentHeightMap.unsubscribeTf();
+      }
+      if(this.sceneNode){
+        this.sceneNode.remove(this.currentHeightMap);
+      }
+      this.currentHeightMap.dispose();
+    }
+
+    var newHeightMap = new HeightMap({
+      message : message,
+    });
+
+    // check if we care about the scene
+    if (this.tfClient) {
+      this.currentHeightMap = newHeightMap;
+      if (this.sceneNode === null) {
+        this.sceneNode = new SceneNode({
+          frameID : message.header.frame_id,
+          tfClient : this.tfClient,
+          object : newHeightMap,
+          pose : this.offsetPose
+        });
+        this.rootObject.add(this.sceneNode);
+      } else {
+        this.sceneNode.add(this.currentHeightMap);
+      }
+    } else {
+      this.sceneNode = this.currentHeightMap = newHeightMap;
+      this.rootObject.add(this.currentHeightMap);
+    }
+
+    this.emit('change');
+
+  };
+
+  return HeightMapClient;
+}(eventemitter2));
 
 /**
  * @author David V. Lu!! - davidvlu@gmail.com
@@ -62137,4 +62250,4 @@ Viewer.prototype.resize = function resize (width, height) {
   this.renderer.setSize(width, height);
 };
 
-export { MARKER_ARROW, MARKER_CUBE, MARKER_SPHERE, MARKER_CYLINDER, MARKER_LINE_STRIP, MARKER_LINE_LIST, MARKER_CUBE_LIST, MARKER_SPHERE_LIST, MARKER_POINTS, MARKER_TEXT_VIEW_FACING, MARKER_MESH_RESOURCE, MARKER_TRIANGLE_LIST, INTERACTIVE_MARKER_KEEP_ALIVE, INTERACTIVE_MARKER_POSE_UPDATE, INTERACTIVE_MARKER_MENU_SELECT, INTERACTIVE_MARKER_BUTTON_CLICK, INTERACTIVE_MARKER_MOUSE_DOWN, INTERACTIVE_MARKER_MOUSE_UP, INTERACTIVE_MARKER_NONE, INTERACTIVE_MARKER_MENU, INTERACTIVE_MARKER_BUTTON, INTERACTIVE_MARKER_MOVE_AXIS, INTERACTIVE_MARKER_MOVE_PLANE, INTERACTIVE_MARKER_ROTATE_AXIS, INTERACTIVE_MARKER_MOVE_ROTATE, INTERACTIVE_MARKER_MOVE_3D, INTERACTIVE_MARKER_ROTATE_3D, INTERACTIVE_MARKER_MOVE_ROTATE_3D, INTERACTIVE_MARKER_INHERIT, INTERACTIVE_MARKER_FIXED, INTERACTIVE_MARKER_VIEW_FACING, makeColorMaterial, intersectPlane, findClosestPoint, closestAxisPoint, DepthCloud, InteractiveMarker, InteractiveMarkerClient, InteractiveMarkerControl, InteractiveMarkerHandle, InteractiveMarkerMenu, Marker, MarkerArrayClient, MarkerClient, Arrow, Arrow2, Axes, Grid, MeshLoader, MeshResource, TriangleList, OccupancyGrid, OccupancyGridClient, HeightMap, Odometry, Path$1 as Path, Point, Polygon, Pose$1 as Pose, PoseArray, PoseWithCovariance, LaserScan, Points$1 as Points, PointCloud2, TFAxes, Urdf, UrdfClient, Highlighter, MouseHandler, OrbitControls, SceneNode, Viewer };
+export { MARKER_ARROW, MARKER_CUBE, MARKER_SPHERE, MARKER_CYLINDER, MARKER_LINE_STRIP, MARKER_LINE_LIST, MARKER_CUBE_LIST, MARKER_SPHERE_LIST, MARKER_POINTS, MARKER_TEXT_VIEW_FACING, MARKER_MESH_RESOURCE, MARKER_TRIANGLE_LIST, INTERACTIVE_MARKER_KEEP_ALIVE, INTERACTIVE_MARKER_POSE_UPDATE, INTERACTIVE_MARKER_MENU_SELECT, INTERACTIVE_MARKER_BUTTON_CLICK, INTERACTIVE_MARKER_MOUSE_DOWN, INTERACTIVE_MARKER_MOUSE_UP, INTERACTIVE_MARKER_NONE, INTERACTIVE_MARKER_MENU, INTERACTIVE_MARKER_BUTTON, INTERACTIVE_MARKER_MOVE_AXIS, INTERACTIVE_MARKER_MOVE_PLANE, INTERACTIVE_MARKER_ROTATE_AXIS, INTERACTIVE_MARKER_MOVE_ROTATE, INTERACTIVE_MARKER_MOVE_3D, INTERACTIVE_MARKER_ROTATE_3D, INTERACTIVE_MARKER_MOVE_ROTATE_3D, INTERACTIVE_MARKER_INHERIT, INTERACTIVE_MARKER_FIXED, INTERACTIVE_MARKER_VIEW_FACING, makeColorMaterial, intersectPlane, findClosestPoint, closestAxisPoint, DepthCloud, InteractiveMarker, InteractiveMarkerClient, InteractiveMarkerControl, InteractiveMarkerHandle, InteractiveMarkerMenu, Marker, MarkerArrayClient, MarkerClient, Arrow, Arrow2, Axes, Grid, MeshLoader, MeshResource, TriangleList, OccupancyGrid, OccupancyGridClient, HeightMap, HeightMapClient, Odometry, Path$1 as Path, Point, Polygon, Pose$1 as Pose, PoseArray, PoseWithCovariance, LaserScan, Points$1 as Points, PointCloud2, TFAxes, Urdf, UrdfClient, Highlighter, MouseHandler, OrbitControls, SceneNode, Viewer };

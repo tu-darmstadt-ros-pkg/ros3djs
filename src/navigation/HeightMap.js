@@ -4,9 +4,17 @@
 
 ROS3D.HeightMap = function(options) {
   options = options || {};
-  var data = options.data || [];
-  var width = options.width || 0;
-  var height = options.height || 0;
+  var minHeight = options.minHeight || -128.0;
+  var maxHeight = options.maxHeight || 127.0;
+
+  var message = options.message;
+  var info = message.info;
+
+  var origin = info.origin;
+  var width = info.width ;
+  var height = info.height;
+  var data = message.data;
+
 
   var planeGeometry = new THREE.PlaneGeometry(width, height, width - 1 , height -1);
   var uintData = new Uint8Array( data.map(value => value + 128) );
@@ -15,8 +23,8 @@ ROS3D.HeightMap = function(options) {
   var uniforms = {
     bumpTexture: { type: 't', value: texture},
     bumpScale: { type: 'f', value: 0.01 },
-    minHeight: { type: 'f', value: -50.0 },
-    maxHeight: { type: 'f', value: 127.0 },
+    minHeight: { type: 'f', value: minHeight },
+    maxHeight: { type: 'f', value: maxHeight },
   };
 
   var heightmapVertexShader = `
@@ -54,6 +62,7 @@ ROS3D.HeightMap = function(options) {
     uniforms: uniforms,
     vertexShader: heightmapVertexShader,
     fragmentShader: heightmapFragmentShader,
+    side: THREE.DoubleSide,
   });
 
   THREE.Mesh.call(this, planeGeometry, shaderMaterial);
@@ -62,6 +71,21 @@ ROS3D.HeightMap = function(options) {
   this.material = shaderMaterial;
   this.texture = texture;
   texture.needsUpdate = true;
+
+  this.quaternion.copy(new THREE.Quaternion(
+    origin.orientation.x,
+    origin.orientation.y,
+    origin.orientation.z,
+    origin.orientation.w
+  ));
+
+  this.position.x = (width * info.resolution) / 2 + origin.position.x;
+  this.position.y = (height * info.resolution) / 2 + origin.position.y;
+  this.position.z = origin.position.z;
+  this.scale.x = info.resolution;
+  this.scale.y = info.resolution;
+  this.scale.z = info.resolution;
+
 
 };
 

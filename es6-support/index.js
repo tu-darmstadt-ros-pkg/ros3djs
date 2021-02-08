@@ -24,6 +24,8 @@ export * from './models/TriangleList'
 export * from './navigation/OccupancyGrid'
 export * from './navigation/OccupancyGridClient'
 export * from './navigation/HeightMap'
+export * from './navigation/HeightMapClient'
+
 export * from './navigation/Odometry'
 export * from './navigation/Path'
 export * from './navigation/Point'

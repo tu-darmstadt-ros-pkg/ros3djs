@@ -60539,9 +60539,17 @@ class HeightMap extends THREE$1.Mesh {
   
   constructor(options) {
     options = options || {};
-    var data = options.data || [];
-    var width = options.width || 0;
-    var height = options.height || 0;
+    var minHeight = options.minHeight || -128.0;
+    var maxHeight = options.maxHeight || 127.0;
+
+    var message = options.message;
+    var info = message.info;
+
+    var origin = info.origin;
+    var width = info.width ;
+    var height = info.height;
+    var data = message.data;
+
 
     var planeGeometry = new THREE$1.PlaneGeometry(width, height, width - 1 , height -1);
     var uintData = new Uint8Array( data.map(value => value + 128) );
@@ -60550,8 +60558,8 @@ class HeightMap extends THREE$1.Mesh {
     var uniforms = {
       bumpTexture: { type: 't', value: texture},
       bumpScale: { type: 'f', value: 0.01 },
-      minHeight: { type: 'f', value: -50.0 },
-      maxHeight: { type: 'f', value: 127.0 },
+      minHeight: { type: 'f', value: minHeight },
+      maxHeight: { type: 'f', value: maxHeight },
     };
 
     var heightmapVertexShader = `
@@ -60589,6 +60597,7 @@ class HeightMap extends THREE$1.Mesh {
       uniforms: uniforms,
       vertexShader: heightmapVertexShader,
       fragmentShader: heightmapFragmentShader,
+      side: THREE$1.DoubleSide,
     });
 
     super(planeGeometry, shaderMaterial);
@@ -60598,11 +60607,133 @@ class HeightMap extends THREE$1.Mesh {
     this.texture = texture;
     texture.needsUpdate = true;
 
+    this.quaternion.copy(new THREE$1.Quaternion(
+      origin.orientation.x,
+      origin.orientation.y,
+      origin.orientation.z,
+      origin.orientation.w
+    ));
+
+    this.position.x = (width * info.resolution) / 2 + origin.position.x;
+    this.position.y = (height * info.resolution) / 2 + origin.position.y;
+    this.position.z = origin.position.z;
+    this.scale.x = info.resolution;
+    this.scale.y = info.resolution;
+    this.scale.z = info.resolution;
+
+
   };
 
   dispose() {
     this.material.dispose();
     this.texture.dispose();
+  };
+}
+
+/**
+ * @author Russell Toris - rctoris@wpi.edu
+ */
+
+class HeightMapClient extends eventemitter2 {
+
+  /**
+   * An occupancy grid client that listens to a given map topic.
+   *
+   * Emits the following events:
+   *
+   *  * 'change' - there was an update or change in the marker
+   *
+   * @constructor
+   * @param options - object with following keys:
+   *
+   *   * ros - the ROSLIB.Ros connection handle
+   *   * topic (optional) - the map topic to listen to
+   *   * continuous (optional) - if the map should be continuously loaded (e.g., for SLAM)
+   *   * tfClient (optional) - the TF client handle to use for a scene node
+   *   * compression (optional) - message compression (default: 'cbor')
+   *   * rootObject (optional) - the root object to add this marker to
+   *   * offsetPose (optional) - offset pose of the grid visualization, e.g. for z-offset (ROSLIB.Pose type)
+   *   * color (optional) - color of the visualized grid
+   *   * opacity (optional) - opacity of the visualized grid (0.0 == fully transparent, 1.0 == opaque)
+   */
+  constructor(options) {
+    super();
+    options = options || {};
+    this.ros = options.ros;
+    this.topicName = options.topic || '/map';
+    this.compression = options.compression || 'cbor';
+    this.tfClient = options.tfClient;
+    this.rootObject = options.rootObject || new THREE$1.Object3D();
+    this.offsetPose = options.offsetPose || new ROSLIB.Pose();
+
+    // current grid that is displayed
+    this.currentHeightMap = null;
+
+    // subscribe to the topic
+    this.rosTopic = undefined;
+    this.subscribe();
+  };
+
+  unsubscribe(){
+    if(this.rosTopic){
+      this.rosTopic.unsubscribe();
+    }
+  };
+
+  subscribe(){
+    this.unsubscribe();
+
+    // subscribe to the topic
+    this.rosTopic = new ROSLIB.Topic({
+      ros : this.ros,
+      name : this.topicName,
+      messageType : 'nav_msgs/OccupancyGrid',
+      queue_length : 1,
+      compression : this.compression
+    });
+    this.sceneNode = null;
+    this.rosTopic.subscribe(this.processMessage.bind(this));
+  };
+
+  processMessage(message){
+    // check for an old map
+    if (this.currentHeightMap) {
+      // check if it there is a tf client
+      if (this.currentHeightMap.tfClient) {
+        // grid is of type ROS3D.SceneNode
+        this.currentHeightMap.unsubscribeTf();
+      }
+      if(this.sceneNode){
+        this.sceneNode.remove(this.currentHeightMap);
+      }
+      this.currentHeightMap.dispose();
+    }
+
+    var newHeightMap = new HeightMap({
+      message : message,
+    });
+
+    // check if we care about the scene
+    if (this.tfClient) {
+      this.currentHeightMap = newHeightMap;
+      if (this.sceneNode === null) {
+        this.sceneNode = new SceneNode({
+          frameID : message.header.frame_id,
+          tfClient : this.tfClient,
+          object : newHeightMap,
+          pose : this.offsetPose
+        });
+        this.rootObject.add(this.sceneNode);
+      } else {
+        this.sceneNode.add(this.currentHeightMap);
+      }
+    } else {
+      this.sceneNode = this.currentHeightMap = newHeightMap;
+      this.rootObject.add(this.currentHeightMap);
+    }
+
+    this.emit('change');
+
   };
 }
 
@@ -62938,6 +63069,7 @@ exports.TriangleList = TriangleList;
 exports.OccupancyGrid = OccupancyGrid;
 exports.OccupancyGridClient = OccupancyGridClient;
 exports.HeightMap = HeightMap;
+exports.HeightMapClient = HeightMapClient;
 exports.Odometry = Odometry;
 exports.Path = Path$1;
 exports.Point = Point;
