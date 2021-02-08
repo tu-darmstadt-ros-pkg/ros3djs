@@ -60112,8 +60112,6 @@ var HeightMap = /*@__PURE__*/(function (superclass) {
     this.position.z = origin.position.z;
     this.scale.x = info.resolution;
     this.scale.y = info.resolution;
-    this.scale.z = info.resolution;
-
 
   }
 

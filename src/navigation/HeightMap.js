@@ -84,8 +84,6 @@ ROS3D.HeightMap = function(options) {
   this.position.z = origin.position.z;
   this.scale.x = info.resolution;
   this.scale.y = info.resolution;
-  this.scale.z = info.resolution;
-
 
 };
 
