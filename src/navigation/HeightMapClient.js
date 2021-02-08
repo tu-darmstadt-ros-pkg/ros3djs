@@ -30,7 +30,10 @@ ROS3D.HeightMapClient = function(options) {
   this.compression = options.compression || 'cbor';
   this.tfClient = options.tfClient;
   this.rootObject = options.rootObject || new THREE.Object3D();
-  this.offsetPose = options.offsetPose || new ROSLIB.Pose();
+  this.heightScale = options.heightScale || 0.01;
+  this.minHeight = options.minHeight || -128.0;
+  this.maxHeight = options.maxHeight || 127.0;
+  this.opacity = options.opacity || 1.0;
 
   // current grid that is displayed
   this.currentHeightMap = null;
@@ -78,6 +81,10 @@ ROS3D.HeightMapClient.prototype.processMessage = function(message){
 
   var newHeightMap = new ROS3D.HeightMap({
     message : message,
+    heightScale: this.heightScale,
+    minHeight: this.minHeight,
+    maxHeight: this.maxHeight,
+    opacity: this.opacity,
   });
 
   // check if we care about the scene
