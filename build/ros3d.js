@@ -60552,7 +60552,7 @@ class HeightMap extends THREE$1.Mesh {
     var data = message.data;
 
 
-    var planeGeometry = new THREE$1.PlaneGeometry(width, height, width - 1 , height -1);
+    var planeGeometry = new THREE$1.PlaneBufferGeometry(width, height, width - 1 , height -1);
     var uintData = new Uint8Array( data.map(value => value + 128) );
 
     var texture = new THREE$1.DataTexture( uintData, width, height, THREE$1.RedFormat );
@@ -60659,7 +60659,7 @@ class HeightMapClient extends eventemitter2 {
     super();
     options = options || {};
     this.ros = options.ros;
-    this.topicName = options.topic || '/map';
+    this.topicName = options.topic || '';
     this.compression = options.compression || 'cbor';
     this.tfClient = options.tfClient;
     this.rootObject = options.rootObject || new THREE$1.Object3D();

@@ -26,7 +26,7 @@ ROS3D.HeightMapClient = function(options) {
   EventEmitter2.call(this);
   options = options || {};
   this.ros = options.ros;
-  this.topicName = options.topic || '/map';
+  this.topicName = options.topic || '';
   this.compression = options.compression || 'cbor';
   this.tfClient = options.tfClient;
   this.rootObject = options.rootObject || new THREE.Object3D();

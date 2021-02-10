@@ -17,7 +17,7 @@ ROS3D.HeightMap = function(options) {
   var data = message.data;
 
 
-  var planeGeometry = new THREE.PlaneGeometry(width, height, width - 1 , height -1);
+  var planeGeometry = new THREE.PlaneBufferGeometry(width, height, width - 1 , height -1);
   var uintData = new Uint8Array( data.map(value => value + 128) );
 
   var texture = new THREE.DataTexture( uintData, width, height, THREE.RedFormat );
