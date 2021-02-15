@@ -36,7 +36,9 @@ ROS3D.MeshResource = function(options) {
   // check the type
   var loaderFunc = ROS3D.MeshLoader.loaders[fileType];
   if (loaderFunc) {
-    loaderFunc(this, uri, options);
+    loaderFunc(this, uri, options, () => {
+      console.error('MeshResource: Loading of Mesh complete')
+    });
   } else {
     console.warn('Unsupported loader for file type: \'' + fileType + '\'');
   }
