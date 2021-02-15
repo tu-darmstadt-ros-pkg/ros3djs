@@ -23,7 +23,6 @@ ROS3D.MeshResource = function(options) {
   var resource = options.resource;
   var material = options.material || null;
   this.warnings = options.warnings;
-  this.loadingCompleteCallback = options.loadingCompleteCallback;
 
 
   // check for a trailing '/'
@@ -38,12 +37,10 @@ ROS3D.MeshResource = function(options) {
   var loaderFunc = ROS3D.MeshLoader.loaders[fileType];
   if (loaderFunc) {
     loaderFunc(this, uri, options, () => {
-      console.info('Loading Resources Completed');
-      this.loadingCompleteCallback && this.loadingCompleteCallback()
+      console.error('MeshResource: Loading of Mesh complete')
     });
   } else {
     console.warn('Unsupported loader for file type: \'' + fileType + '\'');
-    this.loadingCompleteCallback && this.loadingCompleteCallback()
   }
 };
 ROS3D.MeshResource.prototype.__proto__ = THREE.Object3D.prototype;

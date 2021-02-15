@@ -22,87 +22,74 @@ ROS3D.Urdf = function(options) {
   var tfClient = options.tfClient;
   var tfPrefix = options.tfPrefix || '';
   var loader = options.loader;
-  var callback = options.callback;
 
   THREE.Object3D.call(this);
 
   // load all models
-  var meshPromises = []
   var links = urdfModel.links;
   for ( var l in links) {
     var link = links[l];
     for( var i=0; i<link.visuals.length; i++ ) {
       var visual = link.visuals[i];
       if (visual && visual.geometry) {
-        meshPromises.push(new Promise((resolve, reject) => {
-          // Save frameID
-          var frameID = tfPrefix + '/' + link.name;
-          // Save color material
-          var colorMaterial = null;
-          if (visual.material && visual.material.color) {
-            var color = visual.material && visual.material.color;
-            colorMaterial = ROS3D.makeColorMaterial(color.r, color.g, color.b, color.a);
+        // Save frameID
+        var frameID = tfPrefix + '/' + link.name;
+        // Save color material
+        var colorMaterial = null;
+        if (visual.material && visual.material.color) {
+          var color = visual.material && visual.material.color;
+          colorMaterial = ROS3D.makeColorMaterial(color.r, color.g, color.b, color.a);
+        }
+        if (visual.geometry.type === ROSLIB.URDF_MESH) {
+          var uri = visual.geometry.filename;
+          // strips package://
+          var tmpIndex = uri.indexOf('package://');
+          if (tmpIndex !== -1) {
+            uri = uri.substr(tmpIndex + ('package://').length);
           }
-          if (visual.geometry.type === ROSLIB.URDF_MESH) {
-            var uri = visual.geometry.filename;
-            // strips package://
-            var tmpIndex = uri.indexOf('package://');
-            if (tmpIndex !== -1) {
-              uri = uri.substr(tmpIndex + ('package://').length);
-            }
-            var fileType = uri.substr(-3).toLowerCase();
+          var fileType = uri.substr(-3).toLowerCase();
 
-            if (ROS3D.MeshLoader.loaders[fileType]) {
-              // create the model
-              var mesh = new ROS3D.MeshResource({
-                path : path,
-                resource : uri,
-                loader : loader,
-                material : colorMaterial,
-                loadingCompleteCallback: () => {
-                  // check for a scale
-                  if(link.visuals[i].geometry.scale) {
-                    mesh.scale.copy(visual.geometry.scale);
-                  }
-                  // create a scene node with the model
-                  var sceneNode = new ROS3D.SceneNode({
-                    frameID : frameID,
-                    pose : visual.origin,
-                    tfClient : tfClient,
-                    object : mesh
-                  });
-                  sceneNode.name = visual.name
-                  resolve(sceneNode);
-                }
-              });
-            } else {
-              console.warn('Could not load geometry mesh: '+uri);
-              reject()
+          if (ROS3D.MeshLoader.loaders[fileType]) {
+            // create the model
+            var mesh = new ROS3D.MeshResource({
+              path : path,
+              resource : uri,
+              loader : loader,
+              material : colorMaterial
+            });
+
+            // check for a scale
+            if(link.visuals[i].geometry.scale) {
+              mesh.scale.copy(visual.geometry.scale);
             }
+
+            // create a scene node with the model
+            var sceneNode = new ROS3D.SceneNode({
+              frameID : frameID,
+                pose : visual.origin,
+                tfClient : tfClient,
+                object : mesh
+            });
+            sceneNode.name = visual.name
+            this.add(sceneNode);            
           } else {
-            var shapeMesh = this.createShapeMesh(visual, options);
-            // Create a scene node with the shape
-            var scene = new ROS3D.SceneNode({
-              frameID: frameID,
+            console.warn('Could not load geometry mesh: '+uri);
+          }
+        } else {
+          var shapeMesh = this.createShapeMesh(visual, options);
+          // Create a scene node with the shape
+          var scene = new ROS3D.SceneNode({
+            frameID: frameID,
               pose: visual.origin,
               tfClient: tfClient,
               object: shapeMesh
-            });
-            scene.name = visual.name
-            resolve(scene);
-          }
-        }));
+          });
+          scene.name = visual.name
+          this.add(scene);
+        }
       }
     }
   }
-
-  Promise.all(meshPromises).then(nodes => {
-    nodes.forEach(node => {
-      this.add(node);
-    })
-  }).finally(() => {
-    callback && callback()
-  });
 };
 
 ROS3D.Urdf.prototype.createShapeMesh = function(visual, options) {
