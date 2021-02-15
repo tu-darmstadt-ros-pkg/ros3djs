@@ -57182,6 +57182,7 @@ class MeshResource extends THREE$1.Object3D {
     var resource = options.resource;
     var material = options.material || null;
     this.warnings = options.warnings;
+    this.loadingCompleteCallback = options.loadingCompleteCallback;
 
 
     // check for a trailing '/'
@@ -57196,10 +57197,12 @@ class MeshResource extends THREE$1.Object3D {
     var loaderFunc = MeshLoader.loaders[fileType];
     if (loaderFunc) {
       loaderFunc(this, uri, options, () => {
-        console.error('MeshResource: Loading of Mesh complete');
+        console.info('Loading Resources Completed');
+        this.loadingCompleteCallback && this.loadingCompleteCallback();
       });
     } else {
       console.warn('Unsupported loader for file type: \'' + fileType + '\'');
+      this.loadingCompleteCallback && this.loadingCompleteCallback();
     }
   };
 }
@@ -61804,74 +61807,87 @@ class Urdf extends THREE$1.Object3D {
     var tfClient = options.tfClient;
     var tfPrefix = options.tfPrefix || '';
     var loader = options.loader;
+    var callback = options.callback;
 
     super();
 
     // load all models
+    var meshPromises = [];
     var links = urdfModel.links;
     for ( var l in links) {
       var link = links[l];
       for( var i=0; i<link.visuals.length; i++ ) {
         var visual = link.visuals[i];
         if (visual && visual.geometry) {
-          // Save frameID
-          var frameID = tfPrefix + '/' + link.name;
-          // Save color material
-          var colorMaterial = null;
-          if (visual.material && visual.material.color) {
-            var color = visual.material && visual.material.color;
-            colorMaterial = makeColorMaterial(color.r, color.g, color.b, color.a);
-          }
-          if (visual.geometry.type === ROSLIB.URDF_MESH) {
-            var uri = visual.geometry.filename;
-            // strips package://
-            var tmpIndex = uri.indexOf('package://');
-            if (tmpIndex !== -1) {
-              uri = uri.substr(tmpIndex + ('package://').length);
+          meshPromises.push(new Promise((resolve, reject) => {
+            // Save frameID
+            var frameID = tfPrefix + '/' + link.name;
+            // Save color material
+            var colorMaterial = null;
+            if (visual.material && visual.material.color) {
+              var color = visual.material && visual.material.color;
+              colorMaterial = makeColorMaterial(color.r, color.g, color.b, color.a);
             }
-            var fileType = uri.substr(-3).toLowerCase();
-
-            if (MeshLoader.loaders[fileType]) {
-              // create the model
-              var mesh = new MeshResource({
-                path : path,
-                resource : uri,
-                loader : loader,
-                material : colorMaterial
-              });
-
-              // check for a scale
-              if(link.visuals[i].geometry.scale) {
-                mesh.scale.copy(visual.geometry.scale);
+            if (visual.geometry.type === ROSLIB.URDF_MESH) {
+              var uri = visual.geometry.filename;
+              // strips package://
+              var tmpIndex = uri.indexOf('package://');
+              if (tmpIndex !== -1) {
+                uri = uri.substr(tmpIndex + ('package://').length);
               }
+              var fileType = uri.substr(-3).toLowerCase();
 
-              // create a scene node with the model
-              var sceneNode = new SceneNode({
-                frameID : frameID,
-                  pose : visual.origin,
-                  tfClient : tfClient,
-                  object : mesh
-              });
-              sceneNode.name = visual.name;
-              this.add(sceneNode);            
+              if (MeshLoader.loaders[fileType]) {
+                // create the model
+                var mesh = new MeshResource({
+                  path : path,
+                  resource : uri,
+                  loader : loader,
+                  material : colorMaterial,
+                  loadingCompleteCallback: () => {
+                    // check for a scale
+                    if(link.visuals[i].geometry.scale) {
+                      mesh.scale.copy(visual.geometry.scale);
+                    }
+                    // create a scene node with the model
+                    var sceneNode = new SceneNode({
+                      frameID : frameID,
+                      pose : visual.origin,
+                      tfClient : tfClient,
+                      object : mesh
+                    });
+                    sceneNode.name = visual.name;
+                    resolve(sceneNode);
+                  }
+                });
+              } else {
+                console.warn('Could not load geometry mesh: '+uri);
+                reject();
+              }
             } else {
-              console.warn('Could not load geometry mesh: '+uri);
-            }
-          } else {
-            var shapeMesh = this.createShapeMesh(visual, options);
-            // Create a scene node with the shape
-            var scene = new SceneNode({
-              frameID: frameID,
+              var shapeMesh = this.createShapeMesh(visual, options);
+              // Create a scene node with the shape
+              var scene = new SceneNode({
+                frameID: frameID,
                 pose: visual.origin,
                 tfClient: tfClient,
                 object: shapeMesh
-            });
-            scene.name = visual.name;
-            this.add(scene);
-          }
+              });
+              scene.name = visual.name;
+              resolve(scene);
+            }
+          }));
         }
       }
     }
+
+    Promise.all(meshPromises).then(nodes => {
+      nodes.forEach(node => {
+        this.add(node);
+      });
+    }).finally(() => {
+      callback && callback();
+    });
   };
 
   createShapeMesh(visual, options) {
