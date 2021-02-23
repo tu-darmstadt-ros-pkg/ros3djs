@@ -60055,9 +60055,6 @@ var OccupancyGridClient = /*@__PURE__*/(function (EventEmitter2) {
 var HeightMap = /*@__PURE__*/(function (superclass) {
   function HeightMap(options) {
     options = options || {};
-    var heightScale = options.heightScale || 0.01;
-    var minHeight = options.minHeight || -128.0;
-    var maxHeight = options.maxHeight || 127.0;
 
     var message = options.message;
     var info = message.info;
@@ -60069,19 +60066,16 @@ var HeightMap = /*@__PURE__*/(function (superclass) {
 
 
     var planeGeometry = new THREE$1.PlaneBufferGeometry(width, height, width - 1 , height -1);
-    var uintData = new Uint8Array( data.map(function (value) { return value + 128; }) );
+    var uintData = new Uint8Array( data );
 
     var texture = new THREE$1.DataTexture( uintData, width, height, THREE$1.RedFormat );
     var uniforms = {
-      bumpTexture: { type: 't', value: texture},
-      bumpScale: { type: 'f', value: heightScale },
-      minHeight: { type: 'f', value: minHeight },
-      maxHeight: { type: 'f', value: maxHeight },
+      bumpTexture: { type: 't', value: texture}
     };
 
-    var heightmapVertexShader = "\n      uniform sampler2D bumpTexture;\n      uniform float bumpScale;\n      uniform float minHeight;\n      uniform float maxHeight;\n      \n      varying float cellHeight;\n      \n      void main() {\n        vec4 bumpData = texture2D( bumpTexture, uv );  \n        cellHeight = clamp((bumpData.r * 255.0)-128.0, minHeight, maxHeight);\n        // move the position along the normal\n        vec3 newPosition = position + normal * bumpScale * cellHeight;\n        \n        gl_Position = projectionMatrix * modelViewMatrix * vec4( newPosition, 1.0 );\n      }\n    ";
+    var heightmapVertexShader = "\n      uniform sampler2D bumpTexture;\n      \n      varying float cellHeight;\n      \n      void main() {\n        vec4 bumpData = texture2D( bumpTexture, uv );  \n        float scaledData = bumpData.r * 255.0;\n        \n        if(abs(scaledData) < 0.00001)\n          cellHeight = 0.0;\n        else if(abs(scaledData - 1.0) < 0.00001)\n          cellHeight = -0.5;\n        else if (abs(scaledData - 255.0) < 0.00001)\n          cellHeight = 2.0;\n        else \n          cellHeight = ((scaledData - 2.0) / 252.0) * 2.5 - 0.5;\n           \n        // move the position along the normal\n        vec3 newPosition = position + normal * cellHeight;\n        \n        gl_Position = projectionMatrix * modelViewMatrix * vec4( newPosition, 1.0 );\n      }\n    ";
 
-    var heightmapFragmentShader = "\n        uniform float minHeight;\n        uniform float maxHeight;\n        \n        varying float cellHeight;\n\n        void main() {\n          float normalizedHeight = (cellHeight - minHeight)/(maxHeight - minHeight);\n          vec4 heightColor = vec4(normalizedHeight, 0.0, 1.0 -normalizedHeight, 1.0);\n          gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0) + heightColor;\n        }\n    ";
+    var heightmapFragmentShader = "\n        varying float cellHeight;\n        \n        // c.x hue, c.y saturation, c.z value\n        vec3 hsv2rgb(vec3 c);\n        vec3 hsv2rgb(vec3 c) {\n          vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);\n          vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);\n          return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);\n        }\n        \n        void main() {\n          float normalizedHeight = (cellHeight + 0.5) / 2.5;\n          vec3 hsv = vec3(1.0 - normalizedHeight, 0.95, 0.88);\n          \n          vec4 heightColor = vec4(hsv2rgb(hsv), 1.0);\n          //vec4 heightColor = vec4(normalizedHeight, 0.0, 1.0 -normalizedHeight, 1.0);\n          gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0) + heightColor;\n          \n          if( abs(cellHeight) < 0.00001 )\n            gl_FragColor.a = 0.0;\n        }\n    ";
 
     var shaderMaterial = new THREE$1.ShaderMaterial({
       uniforms: uniforms,
@@ -60089,6 +60083,7 @@ var HeightMap = /*@__PURE__*/(function (superclass) {
       fragmentShader: heightmapFragmentShader,
       side: THREE$1.DoubleSide,
     });
+    shaderMaterial.transparent = true;
 
     superclass.call(this, planeGeometry, shaderMaterial);
     Object.assign(this, options);
@@ -60137,9 +60132,6 @@ var HeightMapClient = /*@__PURE__*/(function (EventEmitter2) {
     this.tfClient = options.tfClient;
     this.rootObject = options.rootObject || new THREE$1.Object3D();
     this.offsetPose = options.offsetPose || new Pose();
-    this.heightScale = options.heightScale || 0.01;
-    this.minHeight = options.minHeight || -128.0;
-    this.maxHeight = options.maxHeight || 127.0;
 
     // current grid that is displayed
     this.currentHeightMap = null;
@@ -60186,10 +60178,7 @@ var HeightMapClient = /*@__PURE__*/(function (EventEmitter2) {
     }
 
     var newHeightMap = new HeightMap({
-      message : message,
-      heightScale: this.heightScale,
-      minHeight: this.minHeight,
-      maxHeight: this.maxHeight,
+      message : message
     });
 
     // check if we care about the scene

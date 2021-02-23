@@ -31,9 +31,6 @@ ROS3D.HeightMapClient = function(options) {
   this.tfClient = options.tfClient;
   this.rootObject = options.rootObject || new THREE.Object3D();
   this.offsetPose = options.offsetPose || new ROSLIB.Pose();
-  this.heightScale = options.heightScale || 0.01;
-  this.minHeight = options.minHeight || -128.0;
-  this.maxHeight = options.maxHeight || 127.0;
 
   // current grid that is displayed
   this.currentHeightMap = null;
@@ -80,10 +77,7 @@ ROS3D.HeightMapClient.prototype.processMessage = function(message){
   }
 
   var newHeightMap = new ROS3D.HeightMap({
-    message : message,
-    heightScale: this.heightScale,
-    minHeight: this.minHeight,
-    maxHeight: this.maxHeight,
+    message : message
   });
 
   // check if we care about the scene
