@@ -60563,6 +60563,7 @@ class HeightMap extends THREE$1.Mesh {
     };
 
     var heightmapVertexShader = `
+      precision highp float;
       uniform sampler2D bumpTexture;
       
       varying float cellHeight;
@@ -60588,6 +60589,7 @@ class HeightMap extends THREE$1.Mesh {
     `;
 
     var heightmapFragmentShader = `
+        precision highp float;
         varying float cellHeight;
         
         // c.x hue, c.y saturation, c.z value
