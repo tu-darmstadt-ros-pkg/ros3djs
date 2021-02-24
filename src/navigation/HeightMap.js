@@ -28,6 +28,7 @@ ROS3D.HeightMap = function(options) {
   };
 
   var heightmapVertexShader = `
+    precision highp float;
     uniform sampler2D bumpTexture;
     
     varying float cellHeight;
@@ -53,6 +54,7 @@ ROS3D.HeightMap = function(options) {
   `;
 
   var heightmapFragmentShader = `
+      precision highp float;
       varying float cellHeight;
       
       // c.x hue, c.y saturation, c.z value
