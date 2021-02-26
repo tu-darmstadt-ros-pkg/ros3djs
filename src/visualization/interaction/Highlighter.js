@@ -93,7 +93,7 @@ ROS3D.Highlighter.prototype.renderHighlights = function(scene, renderer, camera)
 ROS3D.Highlighter.prototype.makeEverythingInvisible = function (scene) {
   scene.traverse(function(currentObject) {
     if ( currentObject instanceof THREE.Mesh || currentObject instanceof THREE.Line
-         || currentObject instanceof THREE.Sprite ) {
+         || currentObject instanceof THREE.Sprite || currentObject instanceof ROS3D.SceneNode ) {
       currentObject.previousVisibility = currentObject.visible;
       currentObject.visible = false;
     }
@@ -110,7 +110,7 @@ ROS3D.Highlighter.prototype.makeEverythingInvisible = function (scene) {
 ROS3D.Highlighter.prototype.makeHighlightedVisible = function (scene) {
   var makeVisible = function(currentObject) {
       if ( currentObject instanceof THREE.Mesh || currentObject instanceof THREE.Line
-           || currentObject instanceof THREE.Sprite ) {
+           || currentObject instanceof THREE.Sprite || currentObject instanceof ROS3D.SceneNode ) {
         currentObject.visible = true;
       }
   };

@@ -61344,7 +61344,7 @@ Highlighter.prototype.renderHighlights = function renderHighlights (scene, rende
 Highlighter.prototype.makeEverythingInvisible = function makeEverythingInvisible (scene) {
   scene.traverse(function(currentObject) {
     if ( currentObject instanceof THREE$1.Mesh || currentObject instanceof THREE$1.Line
-         || currentObject instanceof THREE$1.Sprite ) {
+         || currentObject instanceof THREE$1.Sprite || currentObject instanceof SceneNode ) {
       currentObject.previousVisibility = currentObject.visible;
       currentObject.visible = false;
     }
@@ -61360,7 +61360,7 @@ Highlighter.prototype.makeEverythingInvisible = function makeEverythingInvisible
 Highlighter.prototype.makeHighlightedVisible = function makeHighlightedVisible (scene) {
   var makeVisible = function(currentObject) {
       if ( currentObject instanceof THREE$1.Mesh || currentObject instanceof THREE$1.Line
-           || currentObject instanceof THREE$1.Sprite ) {
+           || currentObject instanceof THREE$1.Sprite || currentObject instanceof SceneNode ) {
         currentObject.visible = true;
       }
   };
