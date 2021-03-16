@@ -60868,6 +60868,7 @@ let Path$1 = class Path extends THREE$1.Object3D {
     this.topicName = options.topic || '/path';
     this.tfClient = options.tfClient;
     this.color = options.color || 0xcc00ff;
+    this.opacity = options.opacity || 1.0;
     this.lineWidth = options.lineWidth || 1.0;
     this.rootObject = options.rootObject || new THREE$1.Object3D();
 
@@ -60912,7 +60913,9 @@ let Path$1 = class Path extends THREE$1.Object3D {
     }
 
     lineGeometry.computeLineDistances();
-    var lineMaterial = new THREE$1.LineBasicMaterial( { color: this.color, linewidth: this.lineWidth } );
+    var lineMaterial = new THREE$1.LineBasicMaterial( { color: this.color, opacity: this.opacity,
+      linewidth: this.lineWidth } );
+    lineMaterial.transparent = this.opacity < 1.0;
     var line = new THREE$1.Line( lineGeometry, lineMaterial );
 
     this.sn = new SceneNode({
